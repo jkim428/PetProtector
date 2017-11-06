@@ -12,16 +12,30 @@ import android.provider.MediaStore;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
+import android.text.TextUtils;
 import android.view.View;
+import android.widget.EditText;
 import android.widget.ImageView;
+import android.widget.ListView;
+import android.widget.RatingBar;
+import android.widget.Toast;
 
 import java.util.ArrayList;
 import java.util.List;
 
 public class PetListActivity extends AppCompatActivity {
 
+    private DBHelper db;
+    private List<Pet> petList;
+    private PetListAdapter petListAdapter;
+    private ListView petListView;
+
     private ImageView petImageView;
     private Uri imageUri;
+
+    EditText mPetNameEditText;
+    EditText mPetDetailsEditText;
+    EditText mPetPhoneNumberEditText;
 
     // Constants for permissions:
     private static final int GRANTED = PackageManager.PERMISSION_GRANTED;
@@ -32,9 +46,19 @@ public class PetListActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_pet_list);
 
-        petImageView = (ImageView) findViewById(R.id.petImageView);
+        db = new DBHelper(this);
+        petList = db.getAllPets();
+        petListAdapter = new PetListAdapter(this, R.layout.pet_list_item, petList);
+        petListView = (ListView) findViewById(R.id.petListView);
+        petListView.setAdapter(petListAdapter);
 
-        petImageView.setImageURI(getUriFromResource(this, R.drawable.none));
+        petImageView = (ImageView) findViewById(R.id.petImageView);
+        imageUri = getUriFromResource(this, R.drawable.none);
+        petImageView.setImageURI(imageUri);
+
+        mPetNameEditText = (EditText) findViewById(R.id.petNameEditText);
+        mPetDetailsEditText = (EditText) findViewById(R.id.petDetailsEditText);
+        mPetPhoneNumberEditText = (EditText) findViewById(R.id.petPhoneNumberEditText);
     }
 
     public void selectPetImage(View v)
@@ -98,5 +122,40 @@ public class PetListActivity extends AppCompatActivity {
                 + res.getResourceEntryName(resId);
         // Parse the String in order to construct an URI
         return Uri.parse(uri);
+    }
+
+    public void addPet(View view) {
+
+        if (TextUtils.isEmpty(mPetNameEditText.getText().toString())
+                || TextUtils.isEmpty(mPetDetailsEditText.getText().toString())
+                || TextUtils.isEmpty(mPetPhoneNumberEditText.getText().toString()))
+            Toast.makeText(this, "All information about the pet must be provided", Toast.LENGTH_LONG).show();
+        else
+        {
+            String name = mPetNameEditText.getText().toString();
+            String details = mPetDetailsEditText.getText().toString();
+            String phoneNumber = mPetPhoneNumberEditText.getText().toString();
+            String imageUriString = imageUri.toString();
+
+            Pet newPet = new Pet(name, details, phoneNumber, imageUriString);
+            db.addPet(newPet);
+            petList.add(newPet);
+            petListAdapter.notifyDataSetChanged();
+        }
+
+    }
+
+    public void viewPetDetails(View view) {
+
+        Intent detailsIntent = new Intent(this, PetDetailsActivity.class);
+
+        Pet selectedPet = (Pet) view.getTag();
+
+        detailsIntent.putExtra("Name", selectedPet.getName());
+        detailsIntent.putExtra("Details", selectedPet.getDetails());
+        detailsIntent.putExtra("PhoneNumber", selectedPet.getPhoneNumber());
+        detailsIntent.putExtra("ImageUri", selectedPet.getImageUri());
+
+        startActivity(detailsIntent);
     }
 }
